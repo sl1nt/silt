@@ -10,8 +10,8 @@
 template<typename... Args>
 class Handle;
 
-using EventId = uint64_t;
-static constexpr EventId INVALID_EVENT_ID{0};
+using Id = uint64_t;
+static constexpr Id INVALID_EVENT_ID{0};
 
 template<typename... Args>
 class Event : public std::enable_shared_from_this<Event<Args...>> {
@@ -26,24 +26,24 @@ public:
     Event& operator=(Event&&) noexcept;
 
     std::shared_ptr<Handle<Args...>> subscribe(std::function<void(Args...)>);
-    void unsubscribe(EventId);
+    void unsubscribe(Id);
     void fire(Args...);
 
 private:
     struct Subscription {
-        EventId m_eventID{};
+        Id m_eventID{};
         std::function<void(Args...)> m_callback{};
     };
 
     std::vector<Subscription> m_subscriptions;
-    EventId m_maxEventId{1};
+    Id m_maxEventId{1};
 };
 
 template <typename... Args>
 class Handle {
 public:
     Handle() = delete;
-    Handle(std::weak_ptr<Event<Args...>>, EventId) noexcept;
+    Handle(std::weak_ptr<Event<Args...>>, Id) noexcept;
     ~Handle() noexcept;
 
     Handle(const Handle&) = delete;
@@ -56,7 +56,7 @@ private:
     void unsubscribe();
 
     std::weak_ptr<Event<Args...>> m_parent{};
-    EventId m_eventID{};
+    Id m_ID{};
 };
 
 // endregion
@@ -83,7 +83,7 @@ std::shared_ptr<Handle<Args...>> Event<Args...>::subscribe(std::function<void(Ar
 }
 
 template <typename... Args>
-void Event<Args...>::unsubscribe(EventId eventId) {
+void Event<Args...>::unsubscribe(Id eventId) {
     auto removeStart = std::remove_if(m_subscriptions.begin(), m_subscriptions.end(), [eventId](auto& subscription) {
         return eventId == subscription.m_eventID;
     });
@@ -98,8 +98,8 @@ void Event<Args...>::fire(Args... args) {
 }
 
 template <typename... Args>
-Handle<Args...>::Handle(std::weak_ptr<Event<Args...>> weak_ptr, EventId eventId) noexcept
-    : m_parent(weak_ptr), m_eventID(eventId) {}
+Handle<Args...>::Handle(std::weak_ptr<Event<Args...>> weak_ptr, Id eventId) noexcept
+    : m_parent(weak_ptr), m_ID(eventId) {}
 
 template <typename... Args>
 Handle<Args...>::~Handle() noexcept {
@@ -108,7 +108,7 @@ Handle<Args...>::~Handle() noexcept {
 
 template <typename... Args>
 Handle<Args...>::Handle(Handle&& other) noexcept {
-    m_eventID = other.m_eventID;
+    m_ID = other.m_eventID;
     m_parent = std::move(other.m_parent);
     other.m_eventID = INVALID_EVENT_ID;
 }
@@ -117,7 +117,7 @@ template <typename... Args>
 Handle<Args...>& Handle<Args...>::operator=(Handle&& other) noexcept {
     if (this == &other) { return *this; }
     unsubscribe();
-    m_eventID = other.m_eventID;
+    m_ID = other.m_eventID;
     m_parent = std::move(other.m_parent);
     other.m_eventID = INVALID_EVENT_ID;
     return *this;
@@ -125,9 +125,9 @@ Handle<Args...>& Handle<Args...>::operator=(Handle&& other) noexcept {
 
 template <typename... Args>
 void Handle<Args...>::unsubscribe() {
-    if (m_eventID == INVALID_EVENT_ID) { return; }
+    if (m_ID == INVALID_EVENT_ID) { return; }
     if (auto parent = m_parent.lock()) {
-        parent->unsubscribe(m_eventID);
+        parent->unsubscribe(m_ID);
     }
 }
 
