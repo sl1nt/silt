@@ -4,6 +4,7 @@
 #include <memory>
 #include <typeindex>
 #include <unordered_map>
+#include <utility>
 #include <raylib.h>
 
 // region Definitions
@@ -14,6 +15,8 @@ using InnerMap = std::unordered_map<std::string, std::shared_ptr<T>>;
 
 class ResourceManager {
 public:
+    explicit ResourceManager(std::string resourcePath) : m_resourcePath(std::move(resourcePath)) {}
+
     template<typename T>
     std::shared_ptr<T> Get(const std::string&);
 
@@ -25,7 +28,8 @@ private:
     InnerMap<T>& getInnerMap() { return std::any_cast<InnerMap<T>&>(m_outerMap.at(std::type_index(typeid(T)))); }
 
 private:
-    OuterMap m_outerMap;
+    std::string m_resourcePath{};
+    OuterMap m_outerMap{};
 };
 
 // endregion
@@ -42,9 +46,17 @@ std::shared_ptr<T> ResourceManager::Get(const std::string& key) {
     return innerMap[key];
 }
 
+template <typename T>
+std::shared_ptr<T> ResourceManager::Load(const std::string&) {
+    static_assert(false, "No Load specialization for this type");
+    // UNREACHABLE
+    return nullptr;
+}
+
 template <>
 inline std::shared_ptr<Texture2D> ResourceManager::Load(const std::string& path) {
-    return std::shared_ptr<Texture2D>(new Texture2D(LoadTexture(path.c_str())), [](Texture2D* texture) {
+    const std::string fullPath = m_resourcePath + path;
+    return std::shared_ptr<Texture2D>(new Texture2D(LoadTexture(fullPath.c_str())), [](Texture2D* texture) {
         UnloadTexture(*texture);
         delete texture;
     });

@@ -25,7 +25,7 @@ public:
     Event(Event&&) noexcept;
     Event& operator=(Event&&) noexcept;
 
-    std::shared_ptr<Handle<Args...>> subscribe(std::function<void(Args...)>);
+    [[nodiscard]] std::shared_ptr<Handle<Args...>> subscribe(std::function<void(Args...)>);
     void unsubscribe(Id);
     void fire(Args...);
 
@@ -37,6 +37,10 @@ private:
 
     std::vector<Subscription> m_subscriptions;
     Id m_maxEventId{1};
+};
+
+class EventManager {
+public:
 };
 
 template <typename... Args>
@@ -108,18 +112,18 @@ Handle<Args...>::~Handle() noexcept {
 
 template <typename... Args>
 Handle<Args...>::Handle(Handle&& other) noexcept {
-    m_ID = other.m_eventID;
+    m_ID = other.m_ID;
     m_parent = std::move(other.m_parent);
-    other.m_eventID = INVALID_EVENT_ID;
+    other.m_ID = INVALID_EVENT_ID;
 }
 
 template <typename... Args>
 Handle<Args...>& Handle<Args...>::operator=(Handle&& other) noexcept {
     if (this == &other) { return *this; }
     unsubscribe();
-    m_ID = other.m_eventID;
+    m_ID = other.m_ID;
     m_parent = std::move(other.m_parent);
-    other.m_eventID = INVALID_EVENT_ID;
+    other.m_ID = INVALID_EVENT_ID;
     return *this;
 }
 
@@ -132,3 +136,4 @@ void Handle<Args...>::unsubscribe() {
 }
 
 // endregion
+
