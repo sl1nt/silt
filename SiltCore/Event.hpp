@@ -41,6 +41,9 @@ private:
 
 class EventManager {
 public:
+    Event<double> m_onUpdate{};
+    Event<double> m_onFixedUpdate{};
+    Event<> m_onRender{};
 };
 
 template <typename... Args>
